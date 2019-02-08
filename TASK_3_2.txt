@@ -1,16 +1,13 @@
-
 psql -U postgres -c '
-  CREATE TABLE IF NOT EXISTS ratings (
-    userId bigint,
-    movieId bigint,
-    rating float(25),
-    timestamp bigint
+  CREATE TABLE IF NOT EXISTS keywords(
+    movieId float(25),
+    tags VARCHAR (355)
   );'
 
-psql -U postgres -c "\\copy ratings FROM '/tmp/data/ratings.csv' DELIMITER ',' CSV HEADER"
+psql -U postgres -c "\\copy keywords FROM '$NETOLOGY_DATA/raw_data/keywords.csv' DELIMITER ',' CSV HEADER"
 
-psql -U postgres -c "
-WITH top_rated as ( 
+psql -U postgres
+
 SELECT
     movieId,
     AVG(rating) as avg_rating
@@ -18,13 +15,21 @@ FROM public.ratings
 GROUP BY movieId
 HAVING COUNT(rating) > 50
 ORDER BY avg_rating DESC
-LIMIT 150)  
-SELECT
-    movieId,
-    avg_rating
-INTO top_rated_tags FROM top_rated
-;"
+JOIN public.keywords
+    ON keywords.movieid=ratings.movieid
+LIMIT 150
+;
 
-psql -U postgres -c "
-\copy (SELECT * FROM top_rated_tags LIMIT 100) TO 'top_rated_tags_file.csv' WITH CSV HEADER DELIMITER as '\t';
-"
+WIHT top_rated as (SELECT
+    movieId,
+    AVG(rating) as avg_rating
+FROM public.ratings
+GROUP BY movieId
+HAVING COUNT(rating) > 50
+ORDER BY avg_rating DESC
+JOIN public.keywords
+    ON keywords.movieid=ratings.movieid
+LIMIT 150)
+SELECT movieId, 
+                 tags as top_rated_tags
+INTO top_rated_tags.csv FROM top_rated;
